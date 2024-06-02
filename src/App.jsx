@@ -37,17 +37,23 @@ const App = () => {
     const audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
 
-    debugger;
-    const originalAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const copiedArrayBuffer = arrayBuffer.slice(0);
+    const copiedAudioBuffer = await audioContext.decodeAudioData(
+      copiedArrayBuffer
+    );
 
     const timestampBuffer = timeStampAudio(
       arrayBuffer,
-      originalAudioBuffer.sampleRate
+      copiedAudioBuffer.sampleRate,
+      copiedAudioBuffer.duration
     );
     // Play the timestampBuffer
     const source = audioContext.createBufferSource();
     // convert timestampBuffer to an AudioBuffer
-    source.buffer = await audioContext.decodeAudioData(timestampBuffer);
+    const timestampedAudioBuffer = await audioContext.decodeAudioData(
+      timestampBuffer
+    );
+    source.buffer = timestampedAudioBuffer;
     source.connect(audioContext.destination);
     source.start();
   };
