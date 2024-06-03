@@ -47,15 +47,16 @@ const App = () => {
       copiedAudioBuffer.sampleRate,
       copiedAudioBuffer.duration
     );
+    console.log("this is normally where the audio would play");
     // Play the timestampBuffer
-    const source = audioContext.createBufferSource();
-    // convert timestampBuffer to an AudioBuffer
-    const timestampedAudioBuffer = await audioContext.decodeAudioData(
-      timestampBuffer
-    );
-    source.buffer = timestampedAudioBuffer;
-    source.connect(audioContext.destination);
-    source.start();
+    // const source = audioContext.createBufferSource();
+    // // convert timestampBuffer to an AudioBuffer
+    // const timestampedAudioBuffer = await audioContext.decodeAudioData(
+    //   timestampBuffer
+    // );
+    // source.buffer = timestampedAudioBuffer;
+    // source.connect(audioContext.destination);
+    // source.start();
   };
 
   useEffect(() => {
