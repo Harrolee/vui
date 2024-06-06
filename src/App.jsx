@@ -30,7 +30,6 @@ const App = () => {
       setArrayBuffer(event.target.result);
     };
     reader.readAsArrayBuffer(file);
-    // setBlob(new Blob([file], { type: file.type }));
   };
 
   const handleTimestamping = async (arrayBuffer) => {
@@ -42,21 +41,22 @@ const App = () => {
       copiedArrayBuffer
     );
 
-    const timestampBuffer = timeStampAudio(
-      arrayBuffer,
+    const timestampBuffer = await timeStampAudio(
+      copiedAudioBuffer,
       copiedAudioBuffer.sampleRate,
       copiedAudioBuffer.duration
     );
     console.log("this is normally where the audio would play");
     // Play the timestampBuffer
-    // const source = audioContext.createBufferSource();
+    const source = audioContext.createBufferSource();
+    console.log(`timestampBuffer is a ${timestampBuffer}`);
     // // convert timestampBuffer to an AudioBuffer
     // const timestampedAudioBuffer = await audioContext.decodeAudioData(
     //   timestampBuffer
     // );
-    // source.buffer = timestampedAudioBuffer;
-    // source.connect(audioContext.destination);
-    // source.start();
+    source.buffer = timestampBuffer;
+    source.connect(audioContext.destination);
+    source.start();
   };
 
   useEffect(() => {
