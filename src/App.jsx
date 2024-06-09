@@ -1,25 +1,9 @@
-// import React from "react";
-// // import WaveformComparison from "./WaveformComparison";
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <PlaybackPage />
-
-//     </div>
-//   );
-// }
-
-// export default App;
-
-// find a speech overlap in incoming audio
-
 import React, { useEffect, useState } from "react";
 // import { FindOverlapByPeak } from "./components/FindOverlapByPeak";
 // import Waveform from "./components/Waveform";
 // import ConstantAudioRecorder from "./components/ConstantAudioRecorder";
 // import EnergyComparison from "./components/EnergyComparison";
-import timeStampAudio from "./utils/timestampAudio";
+import { timeStampAudio } from "./utils/timestampAudio";
 const App = () => {
   const [arrayBuffer, setArrayBuffer] = useState(null);
 
@@ -30,30 +14,25 @@ const App = () => {
       setArrayBuffer(event.target.result);
     };
     reader.readAsArrayBuffer(file);
-    // setBlob(new Blob([file], { type: file.type }));
   };
 
   const handleTimestamping = async (arrayBuffer) => {
     const audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
 
-    const copiedArrayBuffer = arrayBuffer.slice(0);
-    const copiedAudioBuffer = await audioContext.decodeAudioData(
-      copiedArrayBuffer
+    const audioBuffer = await audioContext.decodeAudioData(
+      arrayBuffer.slice(0)
     );
 
-    const timestampBuffer = timeStampAudio(
-      arrayBuffer,
-      copiedAudioBuffer.sampleRate,
-      copiedAudioBuffer.duration
-    );
-    // Play the timestampBuffer
+    const timestampBuffer = await timeStampAudio(audioBuffer);
+    console.log("this is normally where the audio would play");
+    playAudio(timestampBuffer, audioContext);
+  };
+
+  const playAudio = (audioBuffer, audioContext) => {
     const source = audioContext.createBufferSource();
-    // convert timestampBuffer to an AudioBuffer
-    const timestampedAudioBuffer = await audioContext.decodeAudioData(
-      timestampBuffer
-    );
-    source.buffer = timestampedAudioBuffer;
+
+    source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     source.start();
   };

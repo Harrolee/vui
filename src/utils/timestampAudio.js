@@ -1,112 +1,102 @@
-import { WaveFile } from "wavefile";
+export const playAudioBuffer = async (audioBuffer) => {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(audioContext.destination);
+  source.start();
+};
 
-const timeStampAudio = (sourceArrayBuffer, sampleRate, duration) => {
-  const overlapTones = (tone1, tone2) => {
-    const maxLength = Math.max(tone1.length, tone2.length);
-    const overlappedBuffer = new Float32Array(maxLength);
+const signatureToAudioBuffer = async (signature, sampleRate) => {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const audioBuffer = audioContext.createBuffer(
+    1,
+    signature.length,
+    sampleRate
+  );
+  audioBuffer.copyToChannel(signature, 0);
+  return audioBuffer;
+};
 
-    for (let i = 0; i < maxLength; i++) {
-      const sample1 = i < tone1.length ? tone1[i] : 0;
-      const sample2 = i < tone2.length ? tone2[i] : 0;
-      overlappedBuffer[i] = sample1 + sample2;
+const overlapTones = (tones) => {
+  const toneLengths = tones.map((tone) => tone.length);
+  const maxLength = Math.max(...toneLengths);
+  const overlappedBuffer = new Float32Array(maxLength);
+
+  for (let i = 0; i < maxLength; i++) {
+    let sampleSum = 0;
+    for (let tone of tones) {
+      sampleSum += i < tone.length ? tone[i] : 0;
     }
+    overlappedBuffer[i] = Math.min(1, Math.max(-1, sampleSum));
+  }
 
-    return overlappedBuffer;
-  };
+  return overlappedBuffer;
+};
 
-  // the sample rate must be that of the recorded clip for this to work
-  const generateHighFrequencyTone = (duration, frequency) => {
-    const samples = duration * sampleRate;
-    const buffer = new Float32Array(samples);
-    for (let i = 0; i < samples; i++) {
-      buffer[i] = 0.5 * Math.sin(2 * Math.PI * frequency * (i / sampleRate));
-    }
-    return buffer;
-  };
+const generateTone = (duration, frequency, sampleRate) => {
+  const samples = duration * sampleRate;
+  const buffer = new Float32Array(samples);
+  for (let i = 0; i < samples; i++) {
+    const amplitude = 0.5;
+    buffer[i] =
+      amplitude * Math.sin(2 * Math.PI * frequency * (i / sampleRate));
+  }
+  return buffer;
+};
 
-  /*
-    Add controllable parameters here for defining a signature.
-    Parameters might be: increment between timestamp, duration of signature, starting and ending frequencies of signature
-
-    Info in a signature
-      - x/X 
-
-    At a high level, it will
-      - generate a signature that contains this information
-
-    At a low level, it will
-    - determine duration of audio clip
-
-  */
-  const generateSignature = (secondIndex, totalSeconds) => {
+export const generateSignature = (secondIndex, totalSeconds, sampleRate) => {
+  const frame = () => {
     const duration = 0.05;
-    const frequency = 700;
-    if (sampleRate / 2 < frequency) {
-      console.log(
-        `Signature might not be encoded. The frequency is ${frequency} but the sample rate is ${sampleRate}`
-      );
-    }
-
-    let signature = generateHighFrequencyTone(duration, frequency);
-
-    // as a test, even seconds should produce different tones than odd seconds
-    if (totalSeconds % secondIndex) {
-      const perfectFifth = (fundamental) => fundamental * 1.5;
-      const tone2 = generateHighFrequencyTone(
-        duration,
-        perfectFifth(frequency)
-      );
-      signature = overlapTones(signature, tone2);
-    }
-
-    return signature;
+    const bottomTone = generateTone(duration, 21500, sampleRate);
+    const topTone = generateTone(duration, 22000, sampleRate);
+    return overlapTones([bottomTone, topTone]);
   };
 
-  /*
-  Parameters:
-    - sampleRate
-    - source audio
-    - the signature to embed
-    - part of audio to embed that signature into (1/6th, 2/6th, 3/6th, etc)
-  */
-  const embedSignature = (wav, signature, signatureIndex, totalSeconds) => {
-    const samples = wav.getSamples();
-    const signatureSamples = signature.length;
+  const clap = () => {
+    const duration = 0.01;
+    const bottomTone = generateTone(duration, 21600, sampleRate);
+    const middleTone = generateTone(duration, 21700, sampleRate);
+    const topTone = generateTone(duration, 21800, sampleRate);
+    return overlapTones([topTone, middleTone, bottomTone]);
+  };
+
+  if (secondIndex == 0) {
+    // first signature in the track is a clap, like from a clapperstick
+    return signatureToAudioBuffer(overlapTones([frame(), clap()]), sampleRate);
+  } else {
+    // other signatures are just beats
+    return signatureToAudioBuffer(frame(), sampleRate);
+  }
+};
+
+export const timeStampAudio = async (sourceAudioBuffer) => {
+  const sampleRate = sourceAudioBuffer.sampleRate;
+  const duration = sourceAudioBuffer.duration;
+  const embedSignature = (audioBuffer, signature, signatureIndex) => {
+    let data = audioBuffer.getChannelData(0);
+    let signatureData = signature.getChannelData(0);
 
     // Calculate the position in samples where the signature should be embedded
-    const positionInSeconds = signatureIndex / totalSeconds;
-    const positionInSamples = Math.floor(positionInSeconds * samples.length);
-
-    console.log("beginning an overlap, signatureSamples: ", signatureSamples);
-    // Overlap the signature onto the source audio
-    for (let i = 0; i < signatureSamples - 1; i++) {
-      console.log("on step ", i);
-      if (positionInSamples + i < samples.length) {
-        samples[positionInSamples + i] += signature[i];
+    const currentStartingSample = signatureIndex * sampleRate;
+    for (
+      let i = currentStartingSample, j = 0;
+      i < currentStartingSample + sampleRate;
+      i++, j++
+    ) {
+      // data[i] /= 2;
+      if (j < signatureData.length) {
+        signatureData[j] /= 2;
+        data[i] += signatureData[j];
       }
     }
 
-    // Create a new WAV file with the combined samples
-    wav.fromScratch(1, sampleRate, "32f", samples);
-    return wav;
+    return audioBuffer;
   };
 
-  // level here that determines the number of signatures that need to be created
-  // const signatureIndex = signatureManager(source);
-
-  // convert audioBuffer to a wav here
-  let timestampedWav = new WaveFile();
-
-  timestampedWav.fromBuffer(new Uint8Array(sourceArrayBuffer));
-
   for (let i = 0; i < duration; i++) {
-    const signature = generateSignature(i, duration);
-    // embed a given signature into a given section of audio
-    timestampedWav = embedSignature(timestampedWav, signature, i, duration);
+    const signature = await generateSignature(i, duration, sampleRate);
+    sourceAudioBuffer = embedSignature(sourceAudioBuffer, signature, i);
     console.log("embedded: ", i);
   }
-  // as a test, we expect every other second to contain a different tone than the adjacent second
-  return timestampedWav.toBuffer().buffer;
+  return sourceAudioBuffer;
 };
-
-export default timeStampAudio;
