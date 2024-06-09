@@ -69,11 +69,9 @@ export const generateSignature = (secondIndex, totalSeconds, sampleRate) => {
   }
 };
 
-export const timeStampAudio = async (
-  sourceAudioBuffer,
-  sampleRate,
-  duration
-) => {
+export const timeStampAudio = async (sourceAudioBuffer) => {
+  const sampleRate = sourceAudioBuffer.sampleRate;
+  const duration = sourceAudioBuffer.duration;
   const embedSignature = (audioBuffer, signature, signatureIndex) => {
     let data = audioBuffer.getChannelData(0);
     let signatureData = signature.getChannelData(0);

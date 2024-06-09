@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 // import Waveform from "./components/Waveform";
 // import ConstantAudioRecorder from "./components/ConstantAudioRecorder";
 // import EnergyComparison from "./components/EnergyComparison";
-import { timeStampAudio, generateSignature } from "./utils/timestampAudio";
+import { timeStampAudio } from "./utils/timestampAudio";
 const App = () => {
   const [arrayBuffer, setArrayBuffer] = useState(null);
 
@@ -20,25 +20,19 @@ const App = () => {
     const audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
 
-    const copiedArrayBuffer = arrayBuffer.slice(0);
-    const copiedAudioBuffer = await audioContext.decodeAudioData(
-      copiedArrayBuffer
+    const audioBuffer = await audioContext.decodeAudioData(
+      arrayBuffer.slice(0)
     );
 
-    const timestampBuffer = await timeStampAudio(
-      copiedAudioBuffer,
-      copiedAudioBuffer.sampleRate,
-      copiedAudioBuffer.duration
-    );
+    const timestampBuffer = await timeStampAudio(audioBuffer);
     console.log("this is normally where the audio would play");
-    // Play the timestampBuffer
+    playAudio(timestampBuffer, audioContext);
+  };
+
+  const playAudio = (audioBuffer, audioContext) => {
     const source = audioContext.createBufferSource();
-    console.log(`timestampBuffer is a ${timestampBuffer}`);
-    // // convert timestampBuffer to an AudioBuffer
-    // const timestampedAudioBuffer = await audioContext.decodeAudioData(
-    //   timestampBuffer
-    // );
-    source.buffer = timestampBuffer;
+
+    source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     source.start();
   };
