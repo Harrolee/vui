@@ -1,25 +1,9 @@
-// import React from "react";
-// // import WaveformComparison from "./WaveformComparison";
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <PlaybackPage />
-
-//     </div>
-//   );
-// }
-
-// export default App;
-
-// find a speech overlap in incoming audio
-
 import React, { useEffect, useState } from "react";
 // import { FindOverlapByPeak } from "./components/FindOverlapByPeak";
 // import Waveform from "./components/Waveform";
 // import ConstantAudioRecorder from "./components/ConstantAudioRecorder";
 // import EnergyComparison from "./components/EnergyComparison";
-import timeStampAudio from "./utils/timestampAudio";
+import { timeStampAudio, generateSignature } from "./utils/timestampAudio";
 const App = () => {
   const [arrayBuffer, setArrayBuffer] = useState(null);
 
